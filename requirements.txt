@@ -1,0 +1,9 @@
+mysql-connector-python
+fastapi
+uvicorn
+pydantic
+pandas
+beautifulsoup4
+openai
+python-dotenv
+ray  
