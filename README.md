@@ -16,8 +16,11 @@ Docker containerization
 
 ### Installation
 Prerequisites
+
 Python 3.10+
+
 Docker
+
 OpenAI API key
 
 **1. Clone the Repository**
