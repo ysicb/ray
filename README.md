@@ -5,9 +5,13 @@ This project is a chatbot conversation classifier built using FastAPI, Ray Serve
 
 ### Features
 FastAPI for REST API
+
 Ray Serve for scalable AI inference
+
 OpenAI GPT-4o for classification
+
 MySQL Database integration
+
 Docker containerization
 
 ### Installation
