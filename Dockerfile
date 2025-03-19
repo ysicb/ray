@@ -10,7 +10,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the application code
 COPY app.py /app/app.py
-COPY .env /app/.env
 
 # Expose ports (important for Ray Dashboard)
 EXPOSE 6379 8265 10001 8000 8080

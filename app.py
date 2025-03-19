@@ -6,18 +6,14 @@ from bs4 import BeautifulSoup
 import json
 import html
 import re
-import openai
 import os
+import pandas as pd
+from transformers import pipeline
 import ray
 from ray import serve
-from dotenv import load_dotenv
-
 
 # FastAPI app instance
 app = FastAPI()
-
-load_dotenv()
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 labels = ["successful", "unsuccessful"]
 
@@ -45,7 +41,7 @@ class ConversationResponse(BaseModel):
 def clean_text(text):
     """Convert JSON or HTML text into readable format."""
     if text is None:
-        return ""  
+        return ""
 
     text = str(text).strip()
 
@@ -61,57 +57,24 @@ def clean_text(text):
 
     if "<" in text and ">" in text:  
         soup = BeautifulSoup(text, "html.parser")
-        text = soup.get_text(separator=" ") 
+        text = soup.get_text(separator=" ")
 
     text = html.unescape(text)
     text = re.sub(r'\s+', ' ', text).strip()
 
     return text
 
-
 @serve.deployment()  # Runs this function asynchronously in Ray
 class ConversationClassifier:
     def __init__(self):
-        import openai
-        import os
-        from dotenv import load_dotenv
-        load_dotenv()
-        self.api_key = os.getenv("OPENAI_API_KEY")
-        if not self.api_key:
-            raise ValueError("OPENAI_API_KEY is not set")
+        self.classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli", device=-1)
 
     async def __call__(self, conversation_text):
-        client = openai.OpenAI(api_key=self.api_key)
+        result = self.classifier(conversation_text, labels)
+        classification = result["labels"][0]
+        confidence_score = round(result["scores"][0], 2)
+        return classification, confidence_score
 
-        prompt = f"""
-        Given the following chatbot conversation, classify it as either 'successful' or 'unsuccessful'.
-        
-        Conversation:
-        {conversation_text}
-        
-        Respond only with JSON:
-        {{
-            "classification": "successful" or "unsuccessful",
-            "confidence_score": float (between 0 and 1)
-        }}
-        """
-
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": "You are an AI that classifies chatbot conversations."},
-                {"role": "user", "content": prompt}
-            ],
-            response_format={"type": "json_object"}
-        )
-
-        result_json = response.choices[0].message.content
-        parsed_result = json.loads(result_json)
-
-        return parsed_result["classification"], round(parsed_result["confidence_score"], 2)
-
-ray.init()
-serve.start()
 classifier = serve.run(ConversationClassifier.bind())
 
 async def fetch_and_classify_conversation(conversation_id: int):
@@ -149,7 +112,6 @@ async def fetch_and_classify_conversation(conversation_id: int):
     classification, confidence_score = await classifier.remote(conversation_text)
 
     return classification, confidence_score, structured_conversation
-
 
 @app.get("/conversation/{conversation_id}", 
          response_model=ConversationResponse,

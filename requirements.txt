@@ -4,7 +4,8 @@ uvicorn
 pydantic
 pandas
 beautifulsoup4
-openai
-python-dotenv
+transformers
+tensorflow
+tf-keras
 ray  
 ray[serve]
